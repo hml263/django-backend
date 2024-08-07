@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  nginx:
+    build: ./nginx
+    ports:
+      - 80:80
+    depends_on:
+      - web
+    volumes:
+      - media_volume:/usr/src/cms_backend/media
+  web:
+    build: ./cms_backend
+    command: gunicorn djangobackend.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - ./cms_backend/:/usr/src/cms_backend/
+      - media_volume:/usr/src/cms_backend/media
+    expose:
+      - 8000
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+      - daphne
+  daphne:
+    build: ./cms_backend
+    command: daphne --bind 0.0.0.0 -p 8002 djangobackend.asgi:application
+    ports:
+      - 8002:8002
+    environment:
+      - SECRET_KEY=testing_key_postgres
+      - SQL_ENGINE=django.db.backends.postgresql
+      - SQL_DATABASE=cmsdb
+      - SQL_USER=postgres
+      - SQL_PASSWORD=postgres
+      - SQL_HOST=db
+      - SQL_PORT=5432
+      - SQL_NAME=postgres
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=cmsdb
+
+volumes:
+  postgres_data:
+  media_volume:
